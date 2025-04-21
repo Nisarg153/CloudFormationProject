@@ -238,17 +238,22 @@ Resources:
         Fn::ImportValue: !Sub '${VPCImportName}'
 
   WebAppAutoScalingGroup:
-    Type: AWS::AutoScaling::AutoScalingGroup
+    Type: 'AWS::AutoScaling::AutoScalingGroup'
+    #https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-as-group.html
     Properties:
+      # To make it faster to update the server during the lab,
+      # we will be replacing the AutoScalingGroup. Therefore
+      # we must let CloudFormation name it
+      # AutoScalingGroupName: !Sub '${NamingPrefix}'
       VPCZoneIdentifier:
         - Fn::ImportValue: !Sub '${VPCImportName}-App1Subnet1'
         - Fn::ImportValue: !Sub '${VPCImportName}-App1Subnet2'
         - Fn::ImportValue: !Sub '${VPCImportName}-App1Subnet3'
-      LaunchTemplate:
-        LaunchTemplateSpecification:
-          LaunchTemplateId: !Ref Web1LaunchTemplate
-          Version: !GetAtt Web1LaunchTemplate.LatestVersionNumber
-      MinSize: 3
+      LaunchTemplate: 
+        LaunchTemplateId: !Ref Web1LaunchTemplate
+        Version: !GetAtt Web1LaunchTemplate.LatestVersionNumber
+
+      MinSize: '3'
       MaxSize: !Ref Web1AutoScaleDesired
       DesiredCapacity: !Ref Web1AutoScaleDesired
       TargetGroupARNs:
@@ -257,12 +262,14 @@ Resources:
         - Key: Name
           Value: !Sub '${NamingPrefix}'
           PropagateAtLaunch: true
-
+    UpdatePolicy:
+      AutoScalingReplacingUpdate:
+        WillReplace: 'true'
 
   Web1LaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
-      LaunchTemplateName: !Sub '${NamingPrefix}-LaunchTemplate'
+      LaunchTemplateName: !Sub '${NamingPrefix}-LT'
       LaunchTemplateData:
         ImageId: !Ref LatestAmiId
         InstanceType: !Ref InstanceType
@@ -270,7 +277,7 @@ Resources:
           Arn: !GetAtt Web1InstanceInstanceProfile.Arn
         SecurityGroupIds:
           - !Ref Web1InstanceSecurityGroup
-        UserData: 
+        UserData:
           Fn::Base64: !Sub |
             #!/bin/bash
             yum -y update
